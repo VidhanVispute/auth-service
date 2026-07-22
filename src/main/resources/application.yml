@@ -20,11 +20,18 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        
 
   h2:
     console:
       enabled: true
       path: /h2-console
+      settings:
+        web-allow-others: false
 
 # Eureka temporarily disabled
 eureka:
@@ -36,3 +43,13 @@ management:
     web:
       exposure:
         include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    com.skycommerce: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
