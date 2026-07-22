@@ -4,27 +4,34 @@ server:
 spring:
   application:
     name: auth-service
-  
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   # Temporarily use H2 in-memory database
   datasource:
-    url: jdbc:h2:mem:skycommerce_auth
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
-  
+    url: jdbc:postgresql://localhost:5432/skycommerce_auth
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
   jpa:
     hibernate:
-      ddl-auto: create-drop  # Creates schema on startup, drops on shutdown
+      ddl-auto: update # Creates schema on startup, drops on shutdown
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        default_schema: public
 
 # Eureka temporarily disabled
 eureka:
@@ -36,3 +43,14 @@ management:
     web:
       exposure:
         include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    com.skycommerce: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.jdbc: DEBUG
