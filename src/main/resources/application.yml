@@ -4,15 +4,16 @@ server:
 spring:
   application:
     name: auth-service
+
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
-  # Temporarily use H2 in-memory database
   datasource:
     url: jdbc:postgresql://localhost:5432/skycommerce_auth
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -22,8 +23,10 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update # Creates schema on startup, drops on shutdown
+      ddl-auto: update
+
     show-sql: true
+
     properties:
       hibernate:
         format_sql: true
@@ -33,7 +36,46 @@ spring:
         order_updates: true
         default_schema: public
 
-# Eureka temporarily disabled
+  jwt:
+    private-key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDCbSzSd3UrtlRtzhsS56yfSQ0V
+      JEGDpBeRkBBtM1Ljjsb17rJ+KReNl8mMvrQQume6XlXmsP5+2CIA7kN3m7or3Zzqmp4C3czWg5cs
+      WTzDYxtA7xbMWhbMXR6JXF1wV8Di3u9qhBCRsGXU+rbBVPko658teOrDCxBHhkIgVIHZMdrUAoGG
+      XNH7nvRaHzugcOrnuI8mGFXA1aFvQ0tNThtZhNKyBXJZQdWofQzPZUclY/y3tcsAZIjRVwrgd/Xq
+      zWZUM757tLIYFCJ3d+JORcnIHTiPDYyleZes/bDjs4LYkSozTOM2UhSMt5OzkrYOVDyL5cknFgg5
+      P5x5oS7km9yrAgMBAAECggEAWHn1NTu+WuuIpUVvJZ2+/Odx6CaNF7pTLV8ZUpBSDpL5MI50tJu/
+      h6REyGM6Lwiczn9CaQ4vagqyAqlqk2IPCQo677n34QcNQas1Xq2nTKTrkJOc1NbEXDCeBlU9gjO0
+      56ka22aI4bubw51qEDW6gugikj9d2e9Nc7cBnZPHWU4eJoPKDCwl7FBmLieIHE8txX4qkvMLIKdc
+      SEaUeErB29bhXPheHhHIXH05ly34uo5rdHIwZDgsOsa3ANQfE5scCHuhQjw4puyH/fao05fqNzZE
+      jB2rZM+05tefR8whIpfRXqXdud1cLsKfkXGvS1QurAglJbsZtsVCF9RzA3orEQKBgQD2HRPKsrTa
+      Jwhy6pujdi9LLoDadrPU5nBEW5u3s53VUd9NtbsWckOPBNj7i9/OUew4Jvmn/9gtNNrfFTRBMTKq
+      Vh+hl7N4IKMPApJLDLLmAqLfOyu4TLlKLK/FoHf1XWjJJY77AKthIPIfVBEG1NdU+OMmI5uFbEy4
+      XjOp6sb2GwKBgQDKPJIHmMGnhlFXZm0dh3hS3vcuN+Z6pkvlWSi6EeUHTGJEhsezC8NSn8yDhz41
+      s0F3ZdlNPELb9QuBfqB+ZV6iKJ1GswnZkIdN9+gEgB0Qu4DvT0m2Ad1f1fmiHb084ZoW6T3IEvIs
+      f82obMQ1B33XGIMP8Ypeu3+DOZUcA25csQKBgCFRPmSqXKFLt3EXIYq3bR+YZAkvGJkxuPEIFcSA
+      pFVEiB5VA8a+ITczSMyE2v9rR7cyT4nWsMUt6pNYo4JPzrQQhKezibAxeuGFT5ipV26b3MCrmfeR
+      K2RHOGRgnNyykITqeLiyFoFHnH9xOfzaw2vVZaq8F0mwp5It7oCKL/URAoGAaQRrEGbSqRumwav+
+      nYbrhJ0j3mxI0wfoAYD7FSSVueSAYvVaXi+NjipNGT/xnhEnvci1vtW8IlxtTSFkVj5tledhRIVU
+      aBYVLPe/FBczAK1dluelb04olsuWhgjLbAH68krMOkkcWN9E/GD+wkrRnhCsfmr/X5Id9RbBx3pA
+      pQECgYBQ64H4V6AkokFKV/G+6zQ/oRv4yRHgp1OM8KLEW9ZYLKsryRwtcQFI1tTWcPmGYhhyp0ys
+      5x/EYKg8YfVsYM+Ioj7dGiQgd1wKMslcMQboUw7OR/qqy+5WdVrxB/LrCWzhWNGUcgCg1wH+eDqO
+      fFds2zTSPASUoaU+8e67ogV6RA==
+      -----END PRIVATE KEY-----
+
+    public-key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwm0s0nd1K7ZUbc4bEuesn0kNFSRBg6QX
+      kZAQbTNS447G9e6yfikXjZfJjL60ELpnul5V5rD+ftgiAO5Dd5u6K92c6pqeAt3M1oOXLFk8w2Mb
+      QO8WzFoWzF0eiVxdcFfA4t7vaoQQkbBl1Pq2wVT5KOufLXjqwwsQR4ZCIFSB2THa1AKBhlzR+570
+      Wh87oHDq57iPJhhVwNWhb0NLTU4bWYTSsgVyWUHVqH0Mz2VHJWP8t7XLAGSI0VcK4Hf16s1mVDO+
+      e7SyGBQid3fiTkXJyB04jw2MpXmXrP2w47OC2JEqM0zjNlIUjLeTs5K2DlQ8i+XJJxYIOT+ceaEu
+      5JvcqwIDAQAB
+      -----END PUBLIC KEY-----
+
+    access-token-expiration-ms: 900000
+    refresh-token-expiration-ms: 604800000
+
 eureka:
   client:
     enabled: false
@@ -43,11 +85,11 @@ management:
     web:
       exposure:
         include: health,info,metrics
+
   endpoint:
     health:
       show-details: always
 
-# Logging
 logging:
   level:
     com.skycommerce: DEBUG
