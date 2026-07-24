@@ -42,6 +42,7 @@ public class SecurityConfig {
                     "/auth/forgot-password",
                     "/auth/reset-password",
                     "/auth/verify-email/**",
+                    "/api/test/public",
                     "/actuator/health",
                     "/actuator/info"
                 ).permitAll()

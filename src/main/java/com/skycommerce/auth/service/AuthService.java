@@ -42,11 +42,14 @@ public class AuthService {
                 .email(request.getEmail().toLowerCase())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.CUSTOMER)
-                .status(UserStatus.ACTIVE)
+                .status(UserStatus.PENDING_VERIFICATION)  // Email verification needed
                 .build();
 
         user = userRepository.save(user);
         log.info("Customer registered: userId={}, email={}", user.getId(), user.getEmail());
+
+        // TODO: Send verification email (we'll implement later)
+        // sendVerificationEmail(user);
 
         return issueTokenPair(user);
     }
@@ -59,16 +62,20 @@ public class AuthService {
                 .email(request.getEmail().toLowerCase())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.VENDOR)
-                .status(UserStatus.PENDING_VERIFICATION)  // Vendors need admin approval
+                .status(UserStatus.PENDING_APPROVAL)  // Admin approval needed
                 .build();
 
         user = userRepository.save(user);
-        log.info("Vendor registered: userId={}, email={}", user.getId(), user.getEmail());
+        log.info("Vendor registered: userId={}, email={}, pending approval", 
+                user.getId(), user.getEmail());
+
+        // TODO: Notify admins about new vendor registration (we'll implement later)
+        // notifyAdminsOfVendorRegistration(user);
 
         return issueTokenPair(user);
     }
 
-    // ── Login ─────────────────────────────────────────────────────────────────
+    // ── Login with Proper Status Checks ──────────────────────────────────────
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
@@ -82,35 +89,112 @@ public class AuthService {
                     HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        // Check account status - More specific messages
-    switch (user.getStatus()) {
-        case PENDING_VERIFICATION:
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, 
-                    "Please verify your email address. A verification link was sent to your email.");
-        case SUSPENDED:
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, 
-                    "Your account has been suspended. Please contact support.");
-        case BANNED:
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, 
-                    "Your account has been banned. This action cannot be undone.");
-        case ACTIVE:
-            // Proceed with login
-            break;
-        default:
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, 
-                    "Account status not recognized. Please contact support.");
-    }
+        // Check account status with proper error messages
+        switch (user.getStatus()) {
+            case PENDING_VERIFICATION:
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, 
+                        "Please verify your email address. A verification link was sent to your email.");
+            
+            case PENDING_APPROVAL:
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, 
+                        "Your vendor account is pending admin approval. You will be notified once approved.");
+            
+            case SUSPENDED:
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, 
+                        "Your account has been suspended. Please contact support for assistance.");
+            
+            case BANNED:
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, 
+                        "Your account has been permanently banned. This action cannot be undone.");
+            
+            case ACTIVE:
+                // Proceed with login
+                break;
+            
+            default:
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, 
+                        "Account status not recognized. Please contact support.");
+        }
 
-
-        log.info("User logged in: userId={}, email={}", user.getId(), user.getEmail());
+        log.info("User logged in: userId={}, email={}, role={}", 
+                user.getId(), user.getEmail(), user.getRole());
+        
         return issueTokenPair(user);
     }
 
-    // ── Token Refresh ─────────────────────────────────────────────────────────
+    // ── Admin Methods ─────────────────────────────────────────────────────────
+
+    @Transactional
+    public void approveVendor(UUID vendorId) {
+        User vendor = userRepository.findById(vendorId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Vendor not found"));
+
+        if (vendor.getRole() != Role.VENDOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "User is not a vendor");
+        }
+
+        if (vendor.getStatus() != UserStatus.PENDING_APPROVAL) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Vendor is not pending approval");
+        }
+
+        vendor.setStatus(UserStatus.ACTIVE);
+        userRepository.save(vendor);
+        
+        log.info("Vendor approved: userId={}, email={}", 
+                vendor.getId(), vendor.getEmail());
+        
+        // TODO: Send approval email to vendor
+        // sendVendorApprovalEmail(vendor);
+    }
+
+    @Transactional
+    public void rejectVendor(UUID vendorId) {
+        User vendor = userRepository.findById(vendorId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Vendor not found"));
+
+        if (vendor.getRole() != Role.VENDOR) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "User is not a vendor");
+        }
+
+        if (vendor.getStatus() != UserStatus.PENDING_APPROVAL) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Vendor is not pending approval");
+        }
+
+        // Option 1: Delete the vendor account
+        // userRepository.delete(vendor);
+        
+        // Option 2: Set as REJECTED (you'd need to add this status)
+        // vendor.setStatus(UserStatus.REJECTED);
+        
+        // Option 3: Keep as PENDING_APPROVAL but add a note (we'll use this for now)
+        log.warn("Vendor rejected: userId={}, email={}", 
+                vendor.getId(), vendor.getEmail());
+        
+        // TODO: Send rejection email to vendor
+        // sendVendorRejectionEmail(vendor);
+    }
+
+    // ── Email Verification ────────────────────────────────────────────────────
+
+    @Transactional
+    public void verifyEmail(String token) {
+        // TODO: Implement email verification
+        // We'll implement this in Step 8
+        log.info("Email verification called with token: {}", token);
+    }
+
+    // ── Token Management ──────────────────────────────────────────────────────
 
     @Transactional
     public AuthResponse refresh(RefreshRequest request) {
@@ -120,7 +204,6 @@ public class AuthService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
 
-        // Reuse detection - if this token was already revoked, it's theft
         if (stored.isRevoked()) {
             log.warn("Refresh token reuse detected! Revoking family. userId={}",
                     stored.getUser().getId());
@@ -129,13 +212,11 @@ public class AuthService {
                     "Token reuse detected. Please log in again.");
         }
 
-        // Check if token is expired
         if (stored.isExpired()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                     "Refresh token expired. Please log in again.");
         }
 
-        // Rotate: revoke current token, issue new token in same family
         stored.setRevoked(true);
         refreshTokenRepository.save(stored);
 
@@ -145,41 +226,32 @@ public class AuthService {
         return issueTokenPairInFamily(stored.getUser(), stored.getFamilyId());
     }
 
-    // ── Logout ────────────────────────────────────────────────────────────────
-
     @Transactional
     public void logout(RefreshRequest request) {
         String tokenHash = TokenHashUtil.hash(request.getRefreshToken());
 
         refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(token -> {
-            // Revoke entire family - logs out all devices sharing this session
             refreshTokenRepository.revokeAllByFamilyId(token.getFamilyId());
             log.info("User logged out: userId={}, familyId={}", 
                     token.getUser().getId(), token.getFamilyId());
         });
-        
-        // Silent success if token not found - don't reveal whether it existed
     }
 
     // ── Private Helpers ───────────────────────────────────────────────────────
 
     private AuthResponse issueTokenPair(User user) {
-        // New login = new family
         return issueTokenPairInFamily(user, UUID.randomUUID());
     }
 
     private AuthResponse issueTokenPairInFamily(User user, UUID familyId) {
-        // Generate access token
         String accessToken = jwtService.generateAccessToken(
                 user.getId().toString(),
                 user.getEmail(),
                 user.getRole().name());
 
-        // Generate refresh token
         String rawRefreshToken = TokenHashUtil.generateToken();
         String refreshTokenHash = TokenHashUtil.hash(rawRefreshToken);
 
-        // Save refresh token to database
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)
                 .tokenHash(refreshTokenHash)
@@ -190,12 +262,11 @@ public class AuthService {
 
         refreshTokenRepository.save(refreshToken);
 
-        // Return response
         return AuthResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(rawRefreshToken)  // Raw token sent to client
+                .refreshToken(rawRefreshToken)
                 .tokenType("Bearer")
-                .expiresIn(900)  // 15 minutes in seconds
+                .expiresIn(900)
                 .role(user.getRole().name())
                 .userId(user.getId().toString())
                 .build();
@@ -205,6 +276,46 @@ public class AuthService {
         if (userRepository.existsByEmail(email.toLowerCase())) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Email already registered");
+        }
+    }
+
+    // ── Admin Controller Methods (to be added) ──────────────────────────────
+
+    public void suspendUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
+
+        if (user.getStatus() == UserStatus.ACTIVE) {
+            user.setStatus(UserStatus.SUSPENDED);
+            userRepository.save(user);
+            log.info("User suspended: userId={}, email={}", 
+                    user.getId(), user.getEmail());
+        }
+    }
+
+    public void banUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
+
+        user.setStatus(UserStatus.BANNED);
+        userRepository.save(user);
+        log.info("User banned: userId={}, email={}", 
+                user.getId(), user.getEmail());
+    }
+
+    public void activateUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
+
+        if (user.getStatus() == UserStatus.PENDING_VERIFICATION ||
+            user.getStatus() == UserStatus.SUSPENDED) {
+            user.setStatus(UserStatus.ACTIVE);
+            userRepository.save(user);
+            log.info("User activated: userId={}, email={}", 
+                    user.getId(), user.getEmail());
         }
     }
 }

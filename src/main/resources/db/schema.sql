@@ -1,4 +1,5 @@
 -- Users table
+-- Users table with correct status check
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -8,7 +9,13 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     CONSTRAINT users_role_check CHECK (role IN ('CUSTOMER', 'VENDOR', 'ADMIN')),
-    CONSTRAINT users_status_check CHECK (status IN ('PENDING_VERIFICATION', 'ACTIVE', 'SUSPENDED', 'BANNED'))
+    CONSTRAINT users_status_check CHECK (status IN (
+        'PENDING_VERIFICATION', 
+        'PENDING_APPROVAL', 
+        'ACTIVE', 
+        'SUSPENDED', 
+        'BANNED'
+    ))
 );
 
 -- Refresh tokens table
@@ -34,6 +41,18 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 
 -- Indexes for performance
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_status ON users(status);
+CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_refresh_tokens_family ON refresh_tokens(family_id);
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
 CREATE INDEX idx_password_reset_user ON password_reset_tokens(user_id);
+
+-- Seed admin user (password: Admin@SkyCommerce#2026)
+INSERT INTO users (id, email, password, role, status) 
+VALUES (
+    gen_random_uuid(),
+    'admin@skycommerce.com',
+    '$2a$12$Xq7QJvQ6b1TnW8jM0x5G2u0z3sM5sAqTq8YxK2vB7fP6oH1L9R4lG',  -- Generate using PasswordEncoder
+    'ADMIN',
+    'ACTIVE'
+) ON CONFLICT (email) DO NOTHING;

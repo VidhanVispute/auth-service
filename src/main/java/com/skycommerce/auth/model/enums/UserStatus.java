@@ -1,8 +1,9 @@
 package com.skycommerce.auth.model.enums;
 
 public enum UserStatus {
-    PENDING_VERIFICATION,  // Registered but email not verified
-    ACTIVE,                 // Fully active account
-    SUSPENDED,              // Temporarily suspended
-    BANNED                  // Permanently banned
+    PENDING_VERIFICATION,  // Customer: Email not verified yet
+    PENDING_APPROVAL,      // Vendor: Waiting for admin approval
+    ACTIVE,                // Fully active account
+    SUSPENDED,             // Temporarily suspended by admin
+    BANNED                 // Permanently banned
 }

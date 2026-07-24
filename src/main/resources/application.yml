@@ -96,3 +96,10 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.jdbc: DEBUG
+
+
+# Admin seeding configuration
+app:
+  admin:
+    email: admin@skycommerce.com
+    password: Admin@SkyCommerce#2026
